@@ -44,9 +44,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=requirements(),
-    entry_points={
-        "console_scripts": ["nauti = nauti.cli.__main__:script"],
-    },
+    entry_points={"console_scripts": ["nauti = nauti.cli:main"]},
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",

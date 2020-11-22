@@ -39,9 +39,7 @@ def expand_interface(ifname: str) -> str:
 @lru_cache()
 def domain_remover():
     cfg_obj = get_config()
-    any_domain = "|".join(
-        re.escape(f".{domain}") for domain in cfg_obj.defaults.domain_names
-    )
+    any_domain = "|".join(re.escape(f".{domain}") for domain in cfg_obj.domain_names)
     return partial(re.compile(any_domain).sub, repl="")
 
 

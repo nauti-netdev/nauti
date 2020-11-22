@@ -18,19 +18,21 @@ from pathlib import Path
 from importlib.machinery import SourceFileLoader
 
 
-NAUTI_EP_SOURCES = 'nauti.sources'
-NAUTI_EP_COLLECTIONS = 'nauti.collections'
+NAUTI_EP_SOURCES = "nauti.sources"
+NAUTI_EP_COLLECTIONS = "nauti.collections"
+NAUTI_EP_TASKS = "nauti.tasks"
 
 
 def find_collection_entrypoints(path: str) -> List[str]:
     from nauti.collection import CollectionMixin
+
     eps = list()
 
-    for mod_fp in Path(path).glob('[!_]*.py'):
+    for mod_fp in Path(path).glob("[!_]*.py"):
         mod_pxfp = str(mod_fp.as_posix())
-        mod_name = mod_pxfp.replace('/', '.')
+        mod_name = mod_pxfp.replace("/", ".")
         mod = SourceFileLoader(mod_name, mod_pxfp).load_module()
-        for exported in getattr(mod, '__all__', []):
+        for exported in getattr(mod, "__all__", []):
             cls = getattr(mod, exported)
             if issubclass(cls, CollectionMixin) and cls != CollectionMixin:
                 eps.append(f"{cls.name} = {mod.__package__}:{exported}")
@@ -40,14 +42,15 @@ def find_collection_entrypoints(path: str) -> List[str]:
 
 def find_source_entrypoints(path: str) -> List[str]:
     from nauti.source import Source
+
     eps = list()
 
-    for mod_fp in Path(path).glob('[!_]*.py'):
+    for mod_fp in Path(path).glob("[!_]*.py"):
         mod_pxfp = str(mod_fp.as_posix())
-        mod_name = mod_pxfp.replace('/', '.')
+        mod_name = mod_pxfp.replace("/", ".")
         mod = SourceFileLoader(mod_name, mod_pxfp).load_module()
 
-        for exported in getattr(mod, '__all__', []):
+        for exported in getattr(mod, "__all__", []):
             cls = getattr(mod, exported)
             if issubclass(cls, Source) and cls != Source:
                 eps.append(f"{cls.name} = {mod.__package__}:{exported}")

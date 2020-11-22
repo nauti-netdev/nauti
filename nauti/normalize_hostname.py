@@ -45,7 +45,7 @@ __all__ = ["normalize_hostname"]
 def domain_remover():
     cfg_obj = get_config()
     any_domain = "|".join(
-        map(re.escape, map(partial(concat, "."), cfg_obj.defaults.domain_names))
+        map(re.escape, map(partial(concat, "."), cfg_obj.domain_names))
     )
     return partial(re.compile(any_domain).sub, repl="")
 

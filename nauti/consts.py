@@ -1,4 +1,3 @@
-
 #      Copyright (C) 2020  Jeremy Schulman
 #
 #      This program is free software: you can redistribute it and/or modify
@@ -16,7 +15,3 @@
 
 DEFAULT_CONFIG_FILE = "nauti.toml"
 ENV_CONFIG_FILE = "NAUTI_CONFIG"
-
-
-
-

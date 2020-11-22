@@ -113,14 +113,14 @@ class Collection(ABC, CollectionMixin):
         # `source_records` is a list of recoreds as they are obtained from the
         # source.  The structure each source_records record is specific to the
         # source.  The inentory record is "fingerprinted" for collection fields;
-        # which in turn are used to create inventory.
+        # which in turn are used to create items.
 
         self.source_records: List[Any] = list()
 
-        # `inventory` is a dict where the key=<fields-key> and the value is the
+        # `items` is a dict where the key=<fields-key> and the value is the
         # fields-record of the source record.
 
-        self.inventory: Dict[Tuple, Dict] = dict()
+        self.items: Dict[Tuple, Dict] = dict()
 
         # `source_record_keys` is a dict key=<fields-key>, value=<source-record>
         # that is used to cross reference the fields-key to a source specific
@@ -169,7 +169,7 @@ class Collection(ABC, CollectionMixin):
         kf_getter = itemgetter(*(fields or self.KEY_FIELDS))
 
         if not with_inventory:
-            self.inventory.clear()
+            self.items.clear()
 
         for rec in with_inventory or self.source_records:
             try:
@@ -182,7 +182,7 @@ class Collection(ABC, CollectionMixin):
                 raise RuntimeError("itimized failed", rec, exc)
 
             as_key = with_translate(kf_getter(item))
-            self.inventory[as_key] = item
+            self.items[as_key] = item
             self.source_record_keys[as_key] = rec
 
     # @classmethod

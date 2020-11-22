@@ -5,3 +5,4 @@ pydantic-env
 toml
 uvloop
 bidict
+tabulate

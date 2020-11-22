@@ -14,14 +14,14 @@
 #      along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from abc import ABC
-from typing import Coroutine
+from typing import Coroutine, Optional
 from pkg_resources import iter_entry_points
 
 
 from nauti.igather import igather
 from nauti.entrypoints import NAUTI_EP_SOURCES
 from nauti.config import get_config
-
+from nauti.config_models import SourcesModel
 
 __all__ = ["Source", "get_source"]
 
@@ -29,6 +29,9 @@ __all__ = ["Source", "get_source"]
 class Source(ABC):
     name = None
     client_class = None
+
+    def __init__(self, source_config: Optional[SourcesModel] = None, **kwargs):
+        self.client = None
 
     async def login(self, *vargs, **kwargs):
         raise NotImplementedError()
@@ -58,6 +61,13 @@ class Source(ABC):
         async for orig_coro, res in igather(tasks, limit=100):
             item = tasks[orig_coro]
             callback(item, res)
+
+    async def __aenter__(self):
+        await self.login()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.logout()
 
 
 def get_source(name: str, source_name=None, **kwargs) -> Source:

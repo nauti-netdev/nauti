@@ -20,7 +20,6 @@
 import os
 from typing import TextIO
 from contextvars import ContextVar
-from pathlib import Path
 
 # -----------------------------------------------------------------------------
 # Public Imports
@@ -65,11 +64,9 @@ def load_config_file(filepath: TextIO):
 
     try:
         cfg_obj = toml.load(filepath)
-        cfg_obj['config_file'] = filepath.name
+        cfg_obj["config_file"] = filepath.name
     except ValueError as exc:
-        raise RuntimeError(
-            f"FAIL: loading file {str(exc)}"
-        )
+        raise RuntimeError(f"FAIL: loading file {str(exc)}")
 
     # try:
     #     for each_fp in fp_dir.glob('*.toml'):
