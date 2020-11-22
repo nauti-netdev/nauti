@@ -1,0 +1,7 @@
+click
+httpx
+pydantic
+pydantic-env
+toml
+uvloop
+bidict
