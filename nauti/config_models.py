@@ -24,14 +24,8 @@ from pathlib import Path
 # Public Imports
 # -----------------------------------------------------------------------------
 
-from pydantic import (
-    BaseModel, Extra,
-    validator, Field
-)
-from pydantic_env.models import (
-    NoExtraBaseModel, EnvSecretStr,
-    EnvUrl
-)
+from pydantic import BaseModel, Extra, validator, Field
+from pydantic_env.models import NoExtraBaseModel, EnvSecretStr, EnvUrl
 
 import toml
 
@@ -39,11 +33,7 @@ import toml
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = [
-    'ConfigModel',
-    'TokenCredential', 'ClientCredential',
-    'SourcesModel'
-]
+__all__ = ["ConfigModel", "TokenCredential", "ClientCredential", "SourcesModel"]
 
 # -----------------------------------------------------------------------------
 #
@@ -70,8 +60,10 @@ AnyCredentialsModel = Union[TokenCredential, ClientCredential]
 #
 # -----------------------------------------------------------------------------
 
+
 class SourceInstanceModel(BaseModel):
     """ A specific source instance, as there could be more than one """
+
     url: EnvUrl
     credentials: AnyCredentialsModel
     options: Optional[Dict[str, Any]] = Field(default_factory=dict)
@@ -80,6 +72,7 @@ class SourceInstanceModel(BaseModel):
 class SourcesModel(BaseModel):
     default: SourceInstanceModel
     vars: Optional[Dict[str, EnvSecretStr]]
+
 
 # -----------------------------------------------------------------------------
 #
@@ -96,7 +89,7 @@ class CollectionsModel(BaseModel):
     # pydantic library depcreciated the use of `fields` in favor of `__fields__`
     # so I presume this workaround is OK.
 
-    fields_: Dict[str, Any] = Field(alias='fields')
+    fields_: Dict[str, Any] = Field(alias="fields")
     maps: Dict[str, Dict]
 
     @property
@@ -113,14 +106,14 @@ class ConfigModel(BaseModel):
     sources: Dict[str, SourcesModel]
     collections: Dict[str, CollectionsModel]
 
-    @validator('sources', pre=True)
+    @validator("sources", pre=True)
     def _each_source(cls, v, values):
-        par_dir = Path(values['config_file']).parent
+        par_dir = Path(values["config_file"]).parent
         return {name: _load_item_config(par_dir, name, SourcesModel) for name in v}
 
-    @validator('collections', pre=True)
+    @validator("collections", pre=True)
     def _each_collection(cls, v, values):
-        par_dir = Path(values['config_file']).parent
+        par_dir = Path(values["config_file"]).parent
         return {name: _load_item_config(par_dir, name, CollectionsModel) for name in v}
 
 
@@ -129,6 +122,7 @@ class ConfigModel(BaseModel):
 #                              PRIVATE FUNCTIONS
 #
 # -----------------------------------------------------------------------------
+
 
 def _load_item_config(cfg_dir, item_name, item_cls):
     file_p = cfg_dir.joinpath(item_name + ".toml")

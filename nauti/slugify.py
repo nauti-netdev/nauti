@@ -16,7 +16,7 @@
 import re
 import unicodedata
 
-__all__ = ['slugify']
+__all__ = ["slugify"]
 
 
 def slugify(value, allow_unicode=False):

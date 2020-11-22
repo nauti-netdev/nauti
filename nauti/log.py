@@ -17,7 +17,7 @@
 # System Imports
 # -----------------------------------------------------------------------------
 
-
+import sys
 import logging
 from functools import lru_cache
 
@@ -37,4 +37,13 @@ __all__ = ["get_logger"]
 
 @lru_cache()
 def get_logger():
-    return logging.getLogger(__package__.partition(".")[0])
+    return logging.getLogger("nauti")
+
+
+def setup_logging():
+    log = get_logger()
+    log.addHandler(logging.StreamHandler(stream=sys.stdout))
+    log.handlers[0].setFormatter(
+        logging.Formatter(fmt="%(asctime)s %(levelname)s: %(message)s")
+    )
+    return log
