@@ -32,9 +32,16 @@ from nauti import tasks
 @click.pass_context
 def sync(ctx, origin, target, collection, **options):
     tasks.load_task_entrypoints()
-    sync_task = tasks.get_task("sync", origin, target, collection)
-    if not sync_task:
+
+    # ensure that there is a sync task registered for this
+    # origin/target/collection, and if not exit with error.
+
+    if (sync_task := tasks.get_task("sync", origin, target, collection)) is None:
         ctx.fail("Sync task does not exist")
+
+    # see if the User specified an apply-filter by name.  If so then retrieve
+    # that class definition from the registered list so that it can be passed to
+    # the take as 'apply_filter' for use.
 
     if (apply_filter_name := options.get("apply_filter")) is not None:
         if not (
