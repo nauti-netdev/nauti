@@ -56,22 +56,7 @@ def get_config() -> ConfigModel:
     return g_config.get()
 
 
-# def config_validation_errors(errors, filepath=None):
-#     sp_4 = " " * 4
-#
-#     as_human = ["Configuration errors", f"{sp_4}File:[{filepath or 'ENV'}]"]
-#
-#     for _err in errors:
-#         loc_str = ".".join(map(str, _err["loc"]))
-#         as_human.append(f"{sp_4}Section: [{loc_str}]: {_err['msg']}")
-#
-#     return "\n".join(as_human)
-
-
-def load_config_file(filepath: TextIO):
-    # as_fp = Path(filepath.name)
-    # fp_dir = as_fp.parent
-    # cfg_obj = dict()
+def load_config_file(filepath: TextIO) -> ConfigModel:
 
     try:
         cfg_obj = toml.load(filepath)
@@ -91,6 +76,6 @@ def load_config_file(filepath: TextIO):
         )
 
 
-def load_default_config_file():
+def load_default_config_file() -> ConfigModel:
     cfg_file = os.environ.get(consts.ENV_CONFIG_FILE, consts.DEFAULT_CONFIG_FILE)
     return load_config_file(filepath=open(cfg_file))

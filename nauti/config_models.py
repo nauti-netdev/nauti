@@ -19,6 +19,7 @@
 
 from typing import Optional, List, Dict, Any, Union
 from pathlib import Path
+from collections import Counter
 
 # -----------------------------------------------------------------------------
 # Public Imports
@@ -27,7 +28,7 @@ from pathlib import Path
 from pydantic import BaseModel, Extra, Field, root_validator
 
 from pydantic_env.models import NoExtraBaseModel, EnvSecretStr, EnvUrl
-from bidict import bidict
+from bidict import bidict, ValueDuplicationError
 
 import toml
 
@@ -90,7 +91,12 @@ class BiDict(Dict):
 
     @classmethod
     def validate(cls, v):
-        return bidict(v)
+        try:
+            return bidict(v)
+        except ValueDuplicationError:
+            cnt = Counter(v.values())
+            dups = {key for key, val in cnt.items() if val > 1}
+            raise ValueError(f"map contains duplicates: {str(dups)}")
 
 
 class CollectionSourceModel(BaseModel):

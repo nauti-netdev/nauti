@@ -26,8 +26,6 @@ from pkg_resources import iter_entry_points
 # Public Imports
 # -----------------------------------------------------------------------------
 
-from bidict import bidict
-
 # -----------------------------------------------------------------------------
 # Private Imports
 # -----------------------------------------------------------------------------
@@ -144,11 +142,8 @@ class Collection(ABC, CollectionMixin):
 
         # `config` is the Config.collections[<name>] structure, initialied in
         # the call to get_collection().
-        self.config = None
 
-        # `mappings` ihe Config.collections[<name>].maps[<source-name>]
-        # structure, initialized in the call to get_collection().
-        self.maps = dict()
+        self.config = None
 
     def make_keys(
         self,
@@ -225,11 +220,4 @@ def get_collection(source, name: str) -> Collection:
     cfg = get_config()
     col_obj: Collection = cls(source=source)
     col_obj.config = cfg.collections[name]
-
-    if (col_maps := col_obj.config.maps.get(source.name)) is not None:
-        for map_name, map_data in col_maps.items():
-            col_obj.maps[map_name] = bidict(
-                {key: value or key.lower() for key, value in map_data.items()}
-            )
-
     return col_obj
