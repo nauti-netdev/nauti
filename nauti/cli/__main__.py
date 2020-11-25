@@ -47,6 +47,9 @@ def main():
         print(f"FAIL: HTTP read timeout on URL: {exc.request.url}")
         print(f"BODY: {exc.request.stream._body}")  # noqa
 
+    except RuntimeError as exc:
+        print(exc.args[0])
+
 
 if __name__ == "__main__":
     main()

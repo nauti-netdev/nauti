@@ -29,7 +29,6 @@ import toml
 from pydantic import ValidationError
 from pydantic_env import config_validation_errors
 
-
 # -----------------------------------------------------------------------------
 # Private Imports
 # -----------------------------------------------------------------------------
@@ -57,6 +56,18 @@ def get_config() -> ConfigModel:
     return g_config.get()
 
 
+# def config_validation_errors(errors, filepath=None):
+#     sp_4 = " " * 4
+#
+#     as_human = ["Configuration errors", f"{sp_4}File:[{filepath or 'ENV'}]"]
+#
+#     for _err in errors:
+#         loc_str = ".".join(map(str, _err["loc"]))
+#         as_human.append(f"{sp_4}Section: [{loc_str}]: {_err['msg']}")
+#
+#     return "\n".join(as_human)
+
+
 def load_config_file(filepath: TextIO):
     # as_fp = Path(filepath.name)
     # fp_dir = as_fp.parent
@@ -65,14 +76,9 @@ def load_config_file(filepath: TextIO):
     try:
         cfg_obj = toml.load(filepath)
         cfg_obj["config_file"] = filepath.name
+
     except ValueError as exc:
         raise RuntimeError(f"FAIL: loading file {str(exc)}")
-
-    # try:
-    #     for each_fp in fp_dir.glob('*.toml'):
-    #         cfg_obj.update(toml.load(each_fp.open()))
-    # except Exception as exc:
-    #     raise RuntimeError(f"FAIL: loading file {str(exc)}")
 
     try:
         config_obj = ConfigModel.parse_obj(cfg_obj)
@@ -87,4 +93,4 @@ def load_config_file(filepath: TextIO):
 
 def load_default_config_file():
     cfg_file = os.environ.get(consts.ENV_CONFIG_FILE, consts.DEFAULT_CONFIG_FILE)
-    load_config_file(filepath=open(cfg_file))
+    return load_config_file(filepath=open(cfg_file))
