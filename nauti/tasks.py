@@ -15,7 +15,7 @@
 
 from functools import wraps
 from pkg_resources import iter_entry_points
-
+from abc import ABC
 
 from nauti.source import get_source
 from nauti.collection import get_collection
@@ -47,3 +47,62 @@ def load_task_entrypoints():
 
 def get_task(*key_fields):
     return _registered_sync_tasks[key_fields]
+
+
+# -----------------------------------------------------------------------------
+# Register a Sync filter class used for the 'sync' tasks
+# -----------------------------------------------------------------------------
+
+
+_registered_sync_filters = dict()
+
+
+class SyncCollectionFetchFilters(ABC):
+    # The name of the origin source kind, for example "netbox"
+    origin = None
+
+    # The name of the target source kind, for example "clearpass"
+    target = None
+
+    # The name of the collection
+    collection = None
+
+    # The set of field names used to collect & sync
+    fields = None
+
+    # The set of field keys
+    key_fields = None
+
+    @staticmethod
+    def origin_fetch_filter():
+        """ returns a source specific fetch filter for the origin source """
+        pass
+
+    @staticmethod
+    def origin_key_filter(item: dict):
+        """ returns bool if the given item fields should be included in the key formation """
+        return True
+
+    @staticmethod
+    def target_fetch_filter():
+        """ returns a source specific fetch filter for the target source"""
+        pass
+
+    @staticmethod
+    def target_key_filter(item: dict):
+        """ return bool if the given item fields should be included in the key formation """
+        return True
+
+
+def register_sync_filter(name="default"):
+    def decorator(cls):
+        key = ("sync", name, cls.origin, cls.target, cls.collection)
+        _registered_sync_filters[key] = cls
+        return cls
+
+    return decorator
+
+
+def get_filter(kind, origin, target, collection, name="default"):
+    key = ("sync", name, origin, target, collection)
+    return _registered_sync_filters.get(key)

@@ -18,21 +18,36 @@ import click
 
 
 from nauti.cli.__main__ import cli
-from .cli_opts import opt_dry_run, opt_verbose, csv_list
+from .cli_opts import opt_dry_run, opt_verbose  # csv_list
 from nauti import tasks
 
 
 @cli.command()
-@click.option("--source", help="source name", required=True)
-@click.option("--target", help="target sync name", required=True)
+@click.option("--origin", help="origin source name", required=True)
+@click.option("--target", help="target source name", required=True)
 @click.option("--collection", help="collection name", required=True)
-@click.option("--source-filter", help="filter expression applied to source collection")
-@click.option("--target-filter", help="filter expression applied to target collection")
-@click.option("--keys", help="comma separated list of key fields", callback=csv_list)
+@click.option("--apply-filter", help="name of registered sync filter")
 @opt_dry_run
 @opt_verbose
 @click.pass_context
-def sync(ctx, source, target, collection, **options):
+def sync(ctx, origin, target, collection, **options):
     tasks.load_task_entrypoints()
-    sync_task = tasks.get_task("sync", source, target, collection)
+    sync_task = tasks.get_task("sync", origin, target, collection)
+    if not sync_task:
+        ctx.fail("Sync task does not exist")
+
+    if (apply_filter_name := options.get("apply_filter")) is not None:
+        if not (
+            apply_filter := tasks.get_filter(
+                "sync",
+                origin=origin,
+                target=target,
+                collection=collection,
+                name=apply_filter_name,
+            )
+        ):
+            ctx.fail(f"NOT-FOUND: apply-filter: {apply_filter_name}")
+
+        options["apply_filter"] = apply_filter
+
     asyncio.run(sync_task(**options))

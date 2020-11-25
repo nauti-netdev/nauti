@@ -34,6 +34,7 @@ from nauti.log import get_logger
 from nauti.source import Source
 from nauti.entrypoints import NAUTI_EP_COLLECTIONS
 from nauti.config import get_config
+from nauti.config_models import CollectionsModel
 
 __all__ = ["Collection", "CollectionMixin", "CollectionCallback", "get_collection"]
 
@@ -143,7 +144,7 @@ class Collection(ABC, CollectionMixin):
         # `config` is the Config.collections[<name>] structure, initialied in
         # the call to get_collection().
 
-        self.config = None
+        self.config: Optional[CollectionsModel] = None
 
     def make_keys(
         self,
@@ -174,7 +175,7 @@ class Collection(ABC, CollectionMixin):
                     continue
 
             except Exception as exc:
-                raise RuntimeError("itimized failed", rec, exc)
+                raise RuntimeError(f"Collection {self.name}: itimized failed", rec, exc)
 
             as_key = with_translate(kf_getter(item))
             self.items[as_key] = item

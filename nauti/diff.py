@@ -119,6 +119,9 @@ def diff_report(diff_res, verbose: Optional[bool] = False):
     print(f"   Update items: count {len(diff_res.changes)}")
     print("\n")
 
+    if not verbose:
+        return
+
     diff_report_adds(diff_res.missing)
     diff_report_deletes(diff_res.extras)
     diff_report_updates(diff_res)

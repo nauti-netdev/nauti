@@ -20,6 +20,7 @@
 from typing import Optional, List, Dict, Any, Union
 from pathlib import Path
 from collections import Counter
+from importlib.machinery import SourceFileLoader, FileFinder
 
 # -----------------------------------------------------------------------------
 # Public Imports
@@ -36,7 +37,14 @@ import toml
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["ConfigModel", "TokenCredential", "ClientCredential", "SourcesModel"]
+__all__ = [
+    "ConfigModel",
+    "TokenCredential",
+    "ClientCredential",
+    "SourcesModel",
+    "CollectionsModel",
+    "CollectionSourceModel",
+]
 
 # -----------------------------------------------------------------------------
 #
@@ -146,6 +154,7 @@ class ConfigModel(BaseModel):
             for name in values["collections"]
         }
 
+        _load_plugins(cfg_dir)
         return values
 
 
@@ -172,3 +181,19 @@ def _load_config(cfg_dir, item_name):
     file_p = cfg_dir.joinpath(item_name + ".toml")
     content = toml.load(file_p.open())
     return next(iter(content.values()))
+
+
+def _load_plugins(cfg_dir: Path):
+    """
+    This function will load all of the python modules found in the given cfg_dir
+    so that any User defined plugins are brought into the system and registered.
+    """
+    plugins_dir = cfg_dir.joinpath("plugins")
+    if not plugins_dir.is_dir():
+        return
+
+    finder = FileFinder(str(plugins_dir), (SourceFileLoader, [".py"]))
+
+    for py_file in plugins_dir.glob("*.py"):
+        mod_name = py_file.stem
+        finder.find_spec(mod_name).loader.load_module(mod_name)
