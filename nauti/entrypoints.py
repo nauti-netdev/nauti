@@ -16,7 +16,7 @@
 from typing import List
 from pathlib import Path
 from importlib.machinery import SourceFileLoader
-
+from pkg_resources import iter_entry_points
 
 NAUTI_EP_SOURCES = "nauti.sources"
 NAUTI_EP_COLLECTIONS = "nauti.collections"
@@ -56,3 +56,8 @@ def find_source_entrypoints(path: str) -> List[str]:
                 eps.append(f"{cls.name} = {mod.__package__}:{exported}")
 
     return eps
+
+
+def load_plugins():
+    for ep in iter_entry_points("nauti.plugins"):
+        ep.load()

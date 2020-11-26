@@ -24,7 +24,7 @@ VERSION = metadata.version("nauti")
     default=lambda: os.environ.get(consts.ENV_CONFIG_FILE, consts.DEFAULT_CONFIG_FILE),
     callback=lambda ctx, param, value: load_config_file(filepath=value),
 )
-def cli(**kwargs):
+def cli(**kwargs):  # noqa
     """ Network automation tools integrator """
     pass
 

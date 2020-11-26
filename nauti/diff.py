@@ -23,7 +23,7 @@ from nauti.collection import Collection
 
 @dataclass()
 class DiffResults(object):
-    source: Collection
+    origin: Collection
     target: Collection
     missing: dict
     extras: dict
@@ -31,8 +31,8 @@ class DiffResults(object):
 
 
 def diff(
-    source_from: Collection,
-    sync_to: Collection,
+    origin: Collection,
+    target: Collection,
     fields: Optional[Iterable] = None,
     fields_cmp: Optional[Dict[str, Callable]] = None,
 ):
@@ -43,10 +43,10 @@ def diff(
 
     Parameters
     ----------
-    source_from:
+    origin:
         The collection that is the source of truth for the diff
 
-    sync_to:
+    target:
         The collection that represents the destination of the update
 
     fields:
@@ -67,29 +67,29 @@ def diff(
         missing: Dict[Tuple]
         changes: List[Tuple[Dict, Dict]]
     """
-    sync_to_keys = set(sync_to.items)
-    source_from_keys = set(source_from.items)
+    sync_to_keys = set(target.items)
+    source_from_keys = set(origin.items)
 
     missing_keys = source_from_keys - sync_to_keys
     extra_keys = sync_to_keys - source_from_keys
     shared_keys = source_from_keys & sync_to_keys
 
     # missing key dict; key=source_records-key, value=key-fingerprint
-    missing_key_items = {key: source_from.items[key] for key in missing_keys}
-    extra_key_items = {key: sync_to.items[key] for key in extra_keys}
+    missing_key_items = {key: origin.items[key] for key in missing_keys}
+    extra_key_items = {key: target.items[key] for key in extra_keys}
 
     changes = dict()
 
     if not fields_cmp:
         fields_cmp = {}
 
-    for field in fields or source_from.FIELDS:
+    for field in fields or origin.FIELDS:
         if field not in fields_cmp:
             fields_cmp[field] = lambda f: f
 
     for key in shared_keys:
-        source_fp = source_from.items[key]
-        sync_fp = sync_to.items[key]
+        source_fp = origin.items[key]
+        sync_fp = target.items[key]
 
         item_changes = dict()
 
@@ -104,8 +104,8 @@ def diff(
         return None
 
     return DiffResults(
-        source=source_from,
-        target=sync_to,
+        origin=origin,
+        target=target,
         missing=missing_key_items,
         changes=changes,
         extras=extra_key_items,

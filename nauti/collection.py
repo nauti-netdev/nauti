@@ -73,11 +73,35 @@ class Collection(ABC, CollectionMixin):
     # -------------------------------------------------------------------------
 
     async def fetch(self, **fetch_args):
-        """ retrieve source records from the collection provider """
+        """
+        This method is used to fetch source records of information and append
+        them into the `source_records` attribute.
+
+        Other Parameters
+        ----------------
+        The fetch_args are specific to the underlying source API.  Meaning
+        that the parameters provided here are going to be specific to how
+        the source client filters/fetches records.
+        """
         raise NotImplementedError()
 
-    # async def fetch_keys(self, keys: Dict):
-    #     raise NotImplementedError()
+    async def fetch_items(self, items: Dict):
+        """
+        This method is used to perform a bulk fetch of items based on the
+        information provided in the `items` parameter. This method is typically
+        called when the Caller needs to fetch a selection of items from one
+        source based on the items in another.
+
+        This subclass is expected to implement this method by making concurrent
+        calls to the `fetch` method; thus ensuring a consisten behavior.
+
+        Parameters
+        ----------
+        items: dict
+            The dictionary of items to use as reference
+
+        """
+        pass
 
     def itemize(self, rec: Dict) -> Dict:
         """ Translate a source specific record into a dict of field items """

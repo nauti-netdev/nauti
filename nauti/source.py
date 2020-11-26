@@ -70,7 +70,7 @@ class Source(ABC):
         await self.logout()
 
 
-def get_source(name: str, source_name=None, **kwargs) -> Source:
+def get_source(name: str, **kwargs) -> Source:
     """
     Return the Source class designated by the 'name' field.  If a source by `name` is not
     found, then raise RuntimeError.
@@ -79,12 +79,6 @@ def get_source(name: str, source_name=None, **kwargs) -> Source:
     ----------
     name: str
         The name of the source type, for example "netbox" or "ipfabric".
-
-    source_name: str
-        The specific instance name for the source, as would be found
-        in the Config.sources structure.  If `instance_name` is not
-        provided, then the `default` config is used.
-
     """
     if (ep := next(iter_entry_points(NAUTI_EP_SOURCES, name), None)) is None:
         raise RuntimeError(f"ERROR:NOT-FOUND: nauti source: {name}")
