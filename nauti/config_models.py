@@ -19,13 +19,17 @@
 
 from typing import Optional, List, Dict, Any, Union
 from pathlib import Path
+from collections import Counter
+from importlib.machinery import SourceFileLoader, FileFinder
 
 # -----------------------------------------------------------------------------
 # Public Imports
 # -----------------------------------------------------------------------------
 
-from pydantic import BaseModel, Extra, validator, Field
+from pydantic import BaseModel, Extra, Field, root_validator
+
 from pydantic_env.models import NoExtraBaseModel, EnvSecretStr, EnvUrl
+from bidict import bidict, ValueDuplicationError
 
 import toml
 
@@ -33,7 +37,14 @@ import toml
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["ConfigModel", "TokenCredential", "ClientCredential", "SourcesModel"]
+__all__ = [
+    "ConfigModel",
+    "TokenCredential",
+    "ClientCredential",
+    "SourcesModel",
+    "CollectionsModel",
+    "CollectionSourceModel",
+]
 
 # -----------------------------------------------------------------------------
 #
@@ -81,6 +92,25 @@ class SourcesModel(BaseModel):
 # -----------------------------------------------------------------------------
 
 
+class BiDict(Dict):
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v):
+        try:
+            return bidict(v)
+        except ValueDuplicationError:
+            cnt = Counter(v.values())
+            dups = {key for key, val in cnt.items() if val > 1}
+            raise ValueError(f"map contains duplicates: {str(dups)}")
+
+
+class CollectionSourceModel(BaseModel):
+    maps: Dict[str, BiDict]
+
+
 class CollectionsModel(BaseModel):
 
     # The BaseModel defines the attribute `fields` so we are not suppoed to use
@@ -89,8 +119,9 @@ class CollectionsModel(BaseModel):
     # pydantic library depcreciated the use of `fields` in favor of `__fields__`
     # so I presume this workaround is OK.
 
-    fields_: Dict[str, Any] = Field(alias="fields")
-    maps: Dict[str, Dict]
+    name: str
+    fields_: Optional[Dict[str, Any]] = Field(alias="fields")
+    sources: Dict[str, CollectionSourceModel]
 
     @property
     def fields(self):
@@ -106,15 +137,25 @@ class ConfigModel(BaseModel):
     sources: Dict[str, SourcesModel]
     collections: Dict[str, CollectionsModel]
 
-    @validator("sources", pre=True)
-    def _each_source(cls, v, values):
-        par_dir = Path(values["config_file"]).parent
-        return {name: _load_item_config(par_dir, name, SourcesModel) for name in v}
+    @root_validator(pre=True)
+    def _root_validate(cls, values):
+        """
+        This root pre-validator is used to load the secondary toml configuration
+        files so that the content can be parsed appropriately.
+        """
+        cfg_dir = Path(values["config_file"]).parent
 
-    @validator("collections", pre=True)
-    def _each_collection(cls, v, values):
-        par_dir = Path(values["config_file"]).parent
-        return {name: _load_item_config(par_dir, name, CollectionsModel) for name in v}
+        values["sources"] = {
+            name: _load_config(cfg_dir, name) for name in values["sources"]
+        }
+
+        values["collections"] = {
+            name: _load_collection_config(cfg_dir, name)
+            for name in values["collections"]
+        }
+
+        _load_plugins(cfg_dir)
+        return values
 
 
 # -----------------------------------------------------------------------------
@@ -124,8 +165,35 @@ class ConfigModel(BaseModel):
 # -----------------------------------------------------------------------------
 
 
-def _load_item_config(cfg_dir, item_name, item_cls):
+# def _load_item_config(cfg_dir, item_name, item_cls):
+#     file_p = cfg_dir.joinpath(item_name + ".toml")
+#     content = toml.load(file_p.open())
+#     name = next(iter(content))
+#     return item_cls.parse_obj(content[name])
+
+
+def _load_collection_config(cfg_dir, item_name):
+    file_p = cfg_dir.joinpath(item_name + ".toml")
+    return toml.load(file_p.open())
+
+
+def _load_config(cfg_dir, item_name):
     file_p = cfg_dir.joinpath(item_name + ".toml")
     content = toml.load(file_p.open())
-    name = next(iter(content))
-    return item_cls.parse_obj(content[name])
+    return next(iter(content.values()))
+
+
+def _load_plugins(cfg_dir: Path):
+    """
+    This function will load all of the python modules found in the given cfg_dir
+    so that any User defined plugins are brought into the system and registered.
+    """
+    plugins_dir = cfg_dir.joinpath("plugins")
+    if not plugins_dir.is_dir():
+        return
+
+    finder = FileFinder(str(plugins_dir), (SourceFileLoader, [".py"]))
+
+    for py_file in plugins_dir.glob("*.py"):
+        mod_name = py_file.stem
+        finder.find_spec(mod_name).loader.load_module(mod_name)

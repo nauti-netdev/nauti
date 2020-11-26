@@ -26,8 +26,6 @@ from pkg_resources import iter_entry_points
 # Public Imports
 # -----------------------------------------------------------------------------
 
-from bidict import bidict
-
 # -----------------------------------------------------------------------------
 # Private Imports
 # -----------------------------------------------------------------------------
@@ -36,6 +34,7 @@ from nauti.log import get_logger
 from nauti.source import Source
 from nauti.entrypoints import NAUTI_EP_COLLECTIONS
 from nauti.config import get_config
+from nauti.config_models import CollectionsModel
 
 __all__ = ["Collection", "CollectionMixin", "CollectionCallback", "get_collection"]
 
@@ -74,11 +73,35 @@ class Collection(ABC, CollectionMixin):
     # -------------------------------------------------------------------------
 
     async def fetch(self, **fetch_args):
-        """ retrieve source records from the collection provider """
+        """
+        This method is used to fetch source records of information and append
+        them into the `source_records` attribute.
+
+        Other Parameters
+        ----------------
+        The fetch_args are specific to the underlying source API.  Meaning
+        that the parameters provided here are going to be specific to how
+        the source client filters/fetches records.
+        """
         raise NotImplementedError()
 
-    # async def fetch_keys(self, keys: Dict):
-    #     raise NotImplementedError()
+    async def fetch_items(self, items: Dict):
+        """
+        This method is used to perform a bulk fetch of items based on the
+        information provided in the `items` parameter. This method is typically
+        called when the Caller needs to fetch a selection of items from one
+        source based on the items in another.
+
+        This subclass is expected to implement this method by making concurrent
+        calls to the `fetch` method; thus ensuring a consisten behavior.
+
+        Parameters
+        ----------
+        items: dict
+            The dictionary of items to use as reference
+
+        """
+        pass
 
     def itemize(self, rec: Dict) -> Dict:
         """ Translate a source specific record into a dict of field items """
@@ -144,11 +167,8 @@ class Collection(ABC, CollectionMixin):
 
         # `config` is the Config.collections[<name>] structure, initialied in
         # the call to get_collection().
-        self.config = None
 
-        # `mappings` ihe Config.collections[<name>].maps[<source-name>]
-        # structure, initialized in the call to get_collection().
-        self.maps = dict()
+        self.config: Optional[CollectionsModel] = None
 
     def make_keys(
         self,
@@ -179,7 +199,7 @@ class Collection(ABC, CollectionMixin):
                     continue
 
             except Exception as exc:
-                raise RuntimeError("itimized failed", rec, exc)
+                raise RuntimeError(f"Collection {self.name}: itimized failed", rec, exc)
 
             as_key = with_translate(kf_getter(item))
             self.items[as_key] = item
@@ -225,11 +245,4 @@ def get_collection(source, name: str) -> Collection:
     cfg = get_config()
     col_obj: Collection = cls(source=source)
     col_obj.config = cfg.collections[name]
-
-    if (col_maps := col_obj.config.maps.get(source.name)) is not None:
-        for map_name, map_data in col_maps.items():
-            col_obj.maps[map_name] = bidict(
-                {key: value or key.lower() for key, value in map_data.items()}
-            )
-
     return col_obj

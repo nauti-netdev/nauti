@@ -24,7 +24,7 @@ VERSION = metadata.version("nauti")
     default=lambda: os.environ.get(consts.ENV_CONFIG_FILE, consts.DEFAULT_CONFIG_FILE),
     callback=lambda ctx, param, value: load_config_file(filepath=value),
 )
-def cli(**kwargs):
+def cli(**kwargs):  # noqa
     """ Network automation tools integrator """
     pass
 
@@ -46,6 +46,9 @@ def main():
     except (httpx.ReadTimeout, httpx.PoolTimeout) as exc:
         print(f"FAIL: HTTP read timeout on URL: {exc.request.url}")
         print(f"BODY: {exc.request.stream._body}")  # noqa
+
+    except RuntimeError as exc:
+        print(exc.args[0])
 
 
 if __name__ == "__main__":

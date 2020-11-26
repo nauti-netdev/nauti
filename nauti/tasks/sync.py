@@ -20,24 +20,35 @@ from pkg_resources import iter_entry_points
 from nauti.source import get_source
 from nauti.collection import get_collection
 from nauti.entrypoints import NAUTI_EP_TASKS
+from nauti.tasks.diff_collection import diff_collections
 
-_registered_sync_tasks = dict()
+from .registrar import _registered_plugins
 
 
-def register_sync_task(source, target, collection):
+__all__ = ["register_diff_task", "load_task_entrypoints", "get_diff_task"]
+
+_PLUGIN_NAME = "diff_task"
+
+
+def register_diff_task(origin, target, collection):
     def decorate(coro):
         @wraps(coro)
-        async def wrapper(*vargs, **kwargs):
-            src_col = get_collection(get_source(source), collection)
+        async def wrapper(**options):
+            src_col = get_collection(get_source(origin), collection)
             trg_col = get_collection(get_source(target), collection)
 
             async with src_col.source, trg_col.source:
-                return await coro(src_col, trg_col, *vargs, **kwargs)
+                return await coro(src_col, trg_col, **options)
 
-        _registered_sync_tasks[("sync", source, target, collection)] = wrapper
+        key = (origin, target, collection)
+        _registered_plugins[_PLUGIN_NAME][key] = wrapper
         return wrapper
 
     return decorate
+
+
+async def default_diff_task(origin, target, **options):
+    return await diff_collections(origin, target, **options)
 
 
 def load_task_entrypoints():
@@ -45,5 +56,10 @@ def load_task_entrypoints():
         ep.load()
 
 
-def get_task(*key_fields):
-    return _registered_sync_tasks[key_fields]
+def get_diff_task(origin, target, collection):
+    key = (origin, target, collection)
+
+    if task := _registered_plugins[_PLUGIN_NAME].get(key) is not None:
+        return task
+
+    return register_diff_task(*key)(default_diff_task)

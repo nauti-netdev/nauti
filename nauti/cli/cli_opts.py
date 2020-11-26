@@ -15,5 +15,5 @@ opt_device_filter = click.option(
 opt_verbose = click.option("--verbose", "-v", help="detailed output", is_flag=True)
 
 
-def csv_list(ctx, param, value):
+def csv_list(ctx, param, value):  # noqa
     return "" if not value else value.split(",")

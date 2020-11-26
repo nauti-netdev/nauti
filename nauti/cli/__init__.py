@@ -1,2 +1,2 @@
-from .__main__ import main  # noqa
-from . import sync  # noqa
+from .__main__ import main
+from . import sync
