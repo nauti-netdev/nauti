@@ -13,7 +13,6 @@
 #      You should have received a copy of the GNU General Public License
 #      along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from typing import Type
 import asyncio
 import click
 
@@ -27,7 +26,7 @@ from nauti.tasks.diff_collection import DiffCollectionsFilter
 from nauti.entrypoints import load_plugins
 
 
-async def diff_sync(diff_task, reconciler_cls: Type[Reconciler], **options):
+async def diff_sync(diff_task, reconciler_cls, **options):
     diff_res = await diff_task(**options)
 
     diff_report(diff_res, reports=options.get("diff_report"))
@@ -54,6 +53,7 @@ async def diff_sync(diff_task, reconciler_cls: Type[Reconciler], **options):
 @click.option("--target", help="target source name", required=True)
 @click.option("--collection", help="collection name", required=True)
 @click.option("--filter-name", help="user-defined sync filter name", default="default")
+@click.option("--origin-filter", help="origin specific filter expression")
 @click.option(
     "--diff-report",
     "--dr",
@@ -83,7 +83,7 @@ def cli_sync(ctx, origin, target, collection, **options):
     # that class definition from the registered list so that it can be passed to
     # the take as 'apply_filter' for use.
 
-    options["apply_filter"] = DiffCollectionsFilter.get_registered(
+    options["diff_filter_cls"] = DiffCollectionsFilter.get_registered(
         origin=origin, target=target, collection=collection, name=options["filter_name"]
     )
 

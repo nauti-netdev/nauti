@@ -25,6 +25,7 @@ from nauti.collection import Collection
 class DiffResults(object):
     origin: Collection
     target: Collection
+    count: int
     missing: dict
     extras: dict
     changes: dict
@@ -100,19 +101,24 @@ def diff(
         if len(item_changes):
             changes[key] = item_changes
 
-    if not any((missing_key_items, extra_key_items, changes)):
-        return None
+    # if not any((missing_key_items, extra_key_items, changes)):
+    #     return DiffResults
 
     return DiffResults(
         origin=origin,
         target=target,
+        count=len(missing_key_items) + len(changes) + len(extra_key_items),
         missing=missing_key_items,
         changes=changes,
         extras=extra_key_items,
     )
 
 
-def diff_report(diff_res, reports: Optional[set] = None):
+def diff_report(diff_res: DiffResults, reports: Optional[set] = None):
+    if not diff_res.count:
+        print("\nNo Diffs.")
+        return
+
     print("\nDiff Report")
     print(f"   Add items: count {len(diff_res.missing)}")
     print(f"   Remove items: count {len(diff_res.extras)}")
@@ -122,13 +128,13 @@ def diff_report(diff_res, reports: Optional[set] = None):
     if not reports:
         return
 
-    if any(("all" in reports, "add" in reports)):
+    if diff_res.missing and any(("all" in reports, "add" in reports)):
         diff_report_adds(diff_res.missing)
 
-    if any(("all" in reports, "del" in reports)):
+    if diff_res.extras and any(("all" in reports, "del" in reports)):
         diff_report_deletes(diff_res.extras)
 
-    if any(("all" in reports, "upd" in reports)):
+    if diff_res.changes and any(("all" in reports, "upd" in reports)):
         diff_report_updates(diff_res)
 
 
