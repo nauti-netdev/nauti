@@ -24,17 +24,17 @@ from nauti.entrypoints import NAUTI_EP_TASKS
 _registered_sync_tasks = dict()
 
 
-def register_sync_task(source, target, collection):
+def register_sync_task(origin, target, collection):
     def decorate(coro):
         @wraps(coro)
         async def wrapper(*vargs, **kwargs):
-            src_col = get_collection(get_source(source), collection)
+            src_col = get_collection(get_source(origin), collection)
             trg_col = get_collection(get_source(target), collection)
 
             async with src_col.source, trg_col.source:
                 return await coro(src_col, trg_col, *vargs, **kwargs)
 
-        _registered_sync_tasks[("sync", source, target, collection)] = wrapper
+        _registered_sync_tasks[("sync", origin, target, collection)] = wrapper
         return wrapper
 
     return decorate

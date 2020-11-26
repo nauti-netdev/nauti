@@ -16,21 +16,25 @@
 import asyncio
 import click
 
-
 from nauti.cli.__main__ import cli
-from .cli_opts import opt_dry_run, opt_verbose  # csv_list
+from .cli_opts import opt_dry_run  # opt_verbose, csv_list
 from nauti import tasks
 
 
-@cli.command()
+@cli.command("sync")
 @click.option("--origin", help="origin source name", required=True)
 @click.option("--target", help="target source name", required=True)
 @click.option("--collection", help="collection name", required=True)
 @click.option("--apply-filter", help="name of registered sync filter")
+@click.option(
+    "--diff-report",
+    "--dr",
+    type=click.Choice(["all", "add", "del", "upd"]),
+    multiple=True,
+)
 @opt_dry_run
-@opt_verbose
 @click.pass_context
-def sync(ctx, origin, target, collection, **options):
+def cli_sync(ctx, origin, target, collection, **options):
     tasks.load_task_entrypoints()
 
     # ensure that there is a sync task registered for this

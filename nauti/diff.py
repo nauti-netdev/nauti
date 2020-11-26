@@ -112,19 +112,24 @@ def diff(
     )
 
 
-def diff_report(diff_res, verbose: Optional[bool] = False):
+def diff_report(diff_res, reports: Optional[set] = None):
     print("\nDiff Report")
     print(f"   Add items: count {len(diff_res.missing)}")
     print(f"   Remove items: count {len(diff_res.extras)}")
     print(f"   Update items: count {len(diff_res.changes)}")
     print("\n")
 
-    if not verbose:
+    if not reports:
         return
 
-    diff_report_adds(diff_res.missing)
-    diff_report_deletes(diff_res.extras)
-    diff_report_updates(diff_res)
+    if any(("all" in reports, "add" in reports)):
+        diff_report_adds(diff_res.missing)
+
+    if any(("all" in reports, "del" in reports)):
+        diff_report_deletes(diff_res.extras)
+
+    if any(("all" in reports, "upd" in reports)):
+        diff_report_updates(diff_res)
 
 
 def diff_report_adds(items: dict):
