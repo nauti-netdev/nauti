@@ -20,7 +20,7 @@
 from typing import List, Dict, Any, Callable, Tuple, Optional, Type
 from abc import ABC
 from operator import itemgetter
-from pkg_resources import iter_entry_points
+from functools import lru_cache
 
 # -----------------------------------------------------------------------------
 # Public Imports
@@ -32,7 +32,6 @@ from pkg_resources import iter_entry_points
 
 from nauti.log import get_logger
 from nauti.source import Source
-from nauti.entrypoints import NAUTI_EP_COLLECTIONS
 from nauti.config import get_config
 from nauti.config_models import CollectionsModel
 
@@ -101,7 +100,7 @@ class Collection(ABC, CollectionMixin):
             The dictionary of items to use as reference
 
         """
-        pass
+        raise NotImplementedError()
 
     def itemize(self, rec: Dict) -> Dict:
         """ Translate a source specific record into a dict of field items """
@@ -132,6 +131,18 @@ class Collection(ABC, CollectionMixin):
     # -------------------------------------------------------------------------
 
     def __init__(self, source: Source):
+
+        # `fields` are the set of normalized fields used to create the items.  By
+        # default these are taken from the class definition.  They can be
+        # updated/changed during runtime.
+
+        self.fields = self.__class__.FIELDS
+
+        # `key_fields` are the set of fields used to create the item keys.  By
+        # default these are taken from the class definition.  They can be
+        # updated/changed during runtime.
+
+        self.key_fields = self.__class__.KEY_FIELDS
 
         # `source_records` is a list of recoreds as they are obtained from the
         # source.  The structure each source_records record is specific to the
@@ -172,7 +183,7 @@ class Collection(ABC, CollectionMixin):
 
     def make_keys(
         self,
-        *fields,
+        *key_fields,
         with_filter: Optional[Callable[[Dict], bool]] = None,
         with_translate=None,
         with_inventory=None,
@@ -183,10 +194,16 @@ class Collection(ABC, CollectionMixin):
             )
             return
 
+        # if key_fields is provided, then update the instance attribute since
+        # the Caller could invoke make_keys again without specifying key_fields
+        # again.
+
+        self.key_fields = key_fields or self.key_fields
+
         with_filter = with_filter if with_filter else lambda x: True
         with_translate = with_translate or (lambda x: x)
 
-        kf_getter = itemgetter(*(fields or self.KEY_FIELDS))
+        kf_getter = itemgetter(*self.key_fields)
 
         if not with_inventory:
             self.items.clear()
@@ -199,48 +216,71 @@ class Collection(ABC, CollectionMixin):
                     continue
 
             except Exception as exc:
-                raise RuntimeError(f"Collection {self.name}: itimized failed", rec, exc)
+                import traceback
+
+                raise RuntimeError(
+                    f"Collection {self.name}: itimized failed.\n"
+                    f"Record: {rec}\n"
+                    f"Exception: {str(exc)}\n"
+                    f"Traceback: {traceback.format_exc(limit=2)}"
+                )
 
             as_key = with_translate(kf_getter(item))
             self.items[as_key] = item
             self.source_record_keys[as_key] = rec
 
-    # @classmethod
-    # def get_collection(cls, source, name) -> "Collection":
-    #     try:
-    #         c_cls = next(
-    #             iter(
-    #                 c_cls
-    #                 for c_cls in cls.__subclasses__()
-    #                 if all(
-    #                     (
-    #                         c_cls.name == name,
-    #                         c_cls.source_class,
-    #                         isinstance(source, c_cls.source_class),
-    #                     )
-    #                 )
-    #             )
-    #         )
-    #
-    #     except StopIteration:
-    #         raise RuntimeError(
-    #             f"NOT-FOUND: Collection {name} for source class: {source.name}"
-    #         )
-    #
-    #     return c_cls(source=source)
+    @lru_cache()
+    def map_field_value(self, field, value):
+        src_config = self.config.sources[self.source_class.name]
+        mapped = src_config.maps.get(field, {}).get(value)
+        return mapped or value
+
+    @lru_cache()
+    def imap_field_value(self, field, value):
+        """
+        Invert map a field value from normalized value to source specific value.
+
+        Parameters
+        ----------
+        field: str
+            The field name
+
+        value: str
+            The field value
+
+        Returns
+        -------
+        Returns the mapped value if a mapping exists, or the original `value`.
+        """
+
+        if not (src_config := self.config.sources.get(self.source_class.name)):
+            return value
+
+        if not (field_bidict := src_config.maps.get(field)):
+            return value
+
+        mapped = field_bidict.inv.get(
+            value
+        )  # noqa: TODO need to triage why getting type inspection issue.
+        return mapped or value
 
     def __len__(self):
         return len(self.source_records)
 
 
-def get_collection(source, name: str) -> Collection:
+def get_collection(source: Source, name: str) -> Collection:
 
-    for ep in iter_entry_points(NAUTI_EP_COLLECTIONS, name):
-        cls = ep.load()
-        if isinstance(source, cls.source_class):
-            break
-    else:
-        raise RuntimeError(f"ERROR:NOT-FOUND: nauti collection: {name}")
+    if (
+        cls := next(
+            (
+                cls
+                for cls in Collection.__subclasses__()
+                if cls.name == name and cls.source_class.name == source.name
+            ),
+            None,
+        )
+    ) is None:
+        raise RuntimeError(f"ERROR:NOT-FOUND: nauti collection: {source.name}/{name}")
 
     cfg = get_config()
     col_obj: Collection = cls(source=source)

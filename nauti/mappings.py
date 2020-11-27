@@ -19,6 +19,18 @@ import re
 
 from nauti.config import get_config
 
+__all__ = ["create_expander", "normalize_hostname"]
+
+
+def create_expander(mapping):
+    mapper = re.compile(r"|".join(list(mapping)))
+
+    @lru_cache()
+    def expander(value):
+        return mapper.sub(lambda mo: mapping[mo.group(0)], value)
+
+    return expander
+
 
 @lru_cache()
 def _expaner_os() -> Callable[[str], str]:
@@ -32,8 +44,10 @@ def _expaner_os() -> Callable[[str], str]:
     return _expander
 
 
-def expand_interface(ifname: str) -> str:
-    return _expaner_os()(ifname)
+#
+#
+# def expand_interface(ifname: str) -> str:
+#     return _expaner_os()(ifname)
 
 
 @lru_cache()

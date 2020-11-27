@@ -24,27 +24,22 @@ from nauti.diff import diff_report
 from nauti.tasks.reconile import Reconciler
 from nauti.tasks.diff_collection import DiffCollectionsFilter
 from nauti.entrypoints import load_plugins
+from nauti.log import get_logger
 
 
-async def diff_sync(diff_task, reconciler_cls, **options):
-    diff_res = await diff_task(**options)
+async def reconcile(reconciler, sync_opts):
+    diff_res = reconciler.diff_res
+    origin, target = diff_res.origin, diff_res.target
 
-    diff_report(diff_res, reports=options.get("diff_report"))
+    async with origin.source, target.source:
+        if diff_res.missing and any(("all" in sync_opts, "add" in sync_opts)):
+            await reconciler.add_items()
 
-    if options.get("dry_run") is True:
-        return
+        if diff_res.extras and any(("all" in sync_opts, "del" in sync_opts)):
+            await reconciler.delete_items()
 
-    reconciler = reconciler_cls(diff_res=diff_res, **options)
-    reco_opts = options["reconcile_action"]
-
-    if diff_res.missing and any(("all" in reco_opts, "add" in reco_opts)):
-        await reconciler.add_items()
-
-    if diff_res.extras and any(("all" in reco_opts, "del" in reco_opts)):
-        await reconciler.delete_items()
-
-    if diff_res.changes and any(("all" in reco_opts, "upd" in reco_opts)):
-        await reconciler.update_items()
+        if diff_res.changes and any(("all" in sync_opts, "upd" in sync_opts)):
+            await reconciler.update_items()
 
 
 @cli.command("sync")
@@ -61,8 +56,8 @@ async def diff_sync(diff_task, reconciler_cls, **options):
     multiple=True,
 )
 @click.option(
-    "--reconcile-action",
-    "--ra",
+    "--sync-action",
+    "--sync",
     help="reconcile action(s)",
     type=click.Choice(["all", "add", "del", "upd"]),
     multiple=True,
@@ -87,11 +82,30 @@ def cli_sync(ctx, origin, target, collection, **options):
         origin=origin, target=target, collection=collection, name=options["filter_name"]
     )
 
+    loop = asyncio.get_event_loop()
+    diff_res = loop.run_until_complete(diff_task(**options))
+
+    diff_report(diff_res, reports=options.get("diff_report"))
+
+    if not (sync_opts := options["sync_action"]):
+        return
+
+    # Determine if there is a reconciler class registered for this combination.
+    # if not, then report the error and exit.
+
     if (
         reconcile_cls := Reconciler.get_registered(
-            origin, target, collection, name="default"
+            diff_res.origin.source.name,
+            diff_res.target.source.name,
+            diff_res.origin.name,
+            name="default",
         )
     ) is None:
-        ctx.fail("ERROR: missing registered reconcile task")
+        get_logger().error("Missing registered reconcile task")
+        return
 
-    asyncio.run(diff_sync(diff_task=diff_task, reconciler_cls=reconcile_cls, **options))
+    # Execute the sync reconcile process.
+    reconciler = reconcile_cls(diff_res=diff_res, **options)
+    loop.run_until_complete(reconcile(reconciler, sync_opts))
+
+    # all done.

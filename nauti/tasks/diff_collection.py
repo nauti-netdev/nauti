@@ -25,6 +25,11 @@ async def diff_collections(
         )
 
     diff_filter = diff_filter_cls(origin=origin_col, target=target_col)
+    if diff_filter.key_fields:
+        origin_col.key_fields = target_col.key_fields = diff_filter.key_fields
+
+    if diff_filter.fields:
+        origin_col.fields = target_col.fields = diff_filter.fields
 
     # -------------------------------------------------------------------------
     # Obtain Origin Collections
@@ -38,9 +43,7 @@ async def diff_collections(
         f"Fetched {origin_name}/{col_name}, fetched {len(origin_col.source_records)} records."
     )
 
-    origin_col.make_keys(
-        *diff_filter.key_fields, with_filter=diff_filter.origin_key_filter
-    )
+    origin_col.make_keys(with_filter=diff_filter.origin_key_filter)
 
     # -------------------------------------------------------------------------
     # Obtain Target Collections
@@ -55,8 +58,6 @@ async def diff_collections(
         f"Fetched {target_name}/{col_name}, fetched {len(target_col.source_records)} records."
     )
 
-    target_col.make_keys(
-        *diff_filter.key_fields, with_filter=diff_filter.target_key_filter
-    )
+    target_col.make_keys(with_filter=diff_filter.target_key_filter)
 
     return diff(origin=origin_col, target=target_col, fields=diff_filter.fields)
