@@ -46,11 +46,27 @@ __all__ = [
     "CollectionSourceModel",
 ]
 
+
 # -----------------------------------------------------------------------------
 #
 #                              CODE BEGINS
 #
 # -----------------------------------------------------------------------------
+
+
+class BiDict(Dict):
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v):
+        try:
+            return bidict(v)
+        except ValueDuplicationError:
+            cnt = Counter(v.values())
+            dups = {key for key, val in cnt.items() if val > 1}
+            raise ValueError(f"map contains duplicates: {str(dups)}")
 
 
 class TokenCredential(NoExtraBaseModel):
@@ -83,6 +99,8 @@ class SourceInstanceModel(BaseModel):
 class SourcesModel(BaseModel):
     default: SourceInstanceModel
     vars: Optional[Dict[str, EnvSecretStr]]
+    expands: Optional[Dict[str, BiDict]]
+    maps: Optional[Dict[str, BiDict]]
 
 
 # -----------------------------------------------------------------------------
@@ -90,21 +108,6 @@ class SourcesModel(BaseModel):
 #                                Collections
 #
 # -----------------------------------------------------------------------------
-
-
-class BiDict(Dict):
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, v):
-        try:
-            return bidict(v)
-        except ValueDuplicationError:
-            cnt = Counter(v.values())
-            dups = {key for key, val in cnt.items() if val > 1}
-            raise ValueError(f"map contains duplicates: {str(dups)}")
 
 
 class CollectionSourceModel(BaseModel):
@@ -119,9 +122,9 @@ class CollectionsModel(BaseModel):
     # pydantic library depcreciated the use of `fields` in favor of `__fields__`
     # so I presume this workaround is OK.
 
-    name: str
+    name: Optional[str]
     fields_: Optional[Dict[str, Any]] = Field(alias="fields")
-    sources: Dict[str, CollectionSourceModel]
+    sources: Optional[Dict[str, CollectionSourceModel]]
 
     @property
     def fields(self):
@@ -174,11 +177,14 @@ class ConfigModel(BaseModel):
 
 def _load_collection_config(cfg_dir, item_name):
     file_p = cfg_dir.joinpath(item_name + ".toml")
-    return toml.load(file_p.open())
+    return toml.load(file_p.open()) if file_p.exists() else {}
 
 
 def _load_config(cfg_dir, item_name):
     file_p = cfg_dir.joinpath(item_name + ".toml")
+    if not file_p.exists():
+        return {}
+
     content = toml.load(file_p.open())
     return next(iter(content.values()))
 

@@ -15,11 +15,9 @@
 
 from abc import ABC
 from typing import Coroutine, Optional
-from pkg_resources import iter_entry_points
 
 
 from nauti.igather import igather
-from nauti.entrypoints import NAUTI_EP_SOURCES
 from nauti.config import get_config
 from nauti.config_models import SourcesModel
 
@@ -80,11 +78,14 @@ def get_source(name: str, **kwargs) -> Source:
     name: str
         The name of the source type, for example "netbox" or "ipfabric".
     """
-    if (ep := next(iter_entry_points(NAUTI_EP_SOURCES, name), None)) is None:
+
+    source_cls = next(
+        (cls for cls in Source.__subclasses__() if cls.name == name), None
+    )
+    if not source_cls:
         raise RuntimeError(f"ERROR:NOT-FOUND: nauti source: {name}")
 
     cfg = get_config()
     src_cfg = cfg.sources[name]
     src_inst_cfg = src_cfg.copy()
-    cls = ep.load()
-    return cls(source_config=src_inst_cfg, **kwargs)
+    return source_cls(config=src_inst_cfg, **kwargs)
