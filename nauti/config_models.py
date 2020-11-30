@@ -125,6 +125,7 @@ class CollectionsModel(BaseModel):
     name: Optional[str]
     fields_: Optional[Dict[str, Any]] = Field(alias="fields")
     sources: Optional[Dict[str, CollectionSourceModel]]
+    options: Optional[Dict[str, Any]]
 
     @property
     def fields(self):
@@ -198,7 +199,7 @@ def _load_plugins(cfg_dir: Path):
     if not plugins_dir.is_dir():
         return
 
-    finder = FileFinder(str(plugins_dir), (SourceFileLoader, [".py"]))
+    finder = FileFinder(str(plugins_dir), (SourceFileLoader, [".py"]))  # noqa
 
     for py_file in plugins_dir.glob("*.py"):
         mod_name = py_file.stem
