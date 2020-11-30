@@ -18,18 +18,18 @@ import click
 
 from nauti.cli.__main__ import cli
 from .cli_opts import opt_dry_run  # opt_verbose, csv_list
-from nauti import tasks
-from nauti.tasks.diff_collection import diff_collections
 from nauti.diff import diff_report
+
+from nauti.auditor import Auditor
+
 from nauti.tasks.reconile import Reconciler
-from nauti.tasks.diff_collection import DiffCollectionsFilter
-from nauti.entrypoints import load_plugins
 from nauti.log import get_logger
 
 
-async def reconcile(reconciler, sync_opts):
+async def run_reconcile(reconciler):
     diff_res = reconciler.diff_res
     origin, target = diff_res.origin, diff_res.target
+    sync_opts = reconciler.options
 
     async with origin.source, target.source:
         if diff_res.missing and any(("all" in sync_opts, "add" in sync_opts)):
@@ -40,6 +40,11 @@ async def reconcile(reconciler, sync_opts):
 
         if diff_res.changes and any(("all" in sync_opts, "upd" in sync_opts)):
             await reconciler.update_items()
+
+
+async def run_audit(auditor: Auditor):
+    async with auditor.origin.source, auditor.target.source:
+        return await auditor.audit()
 
 
 @cli.command("sync")
@@ -65,25 +70,29 @@ async def reconcile(reconciler, sync_opts):
 @opt_dry_run
 @click.pass_context
 def cli_sync(ctx, origin, target, collection, **options):
-    load_plugins()
-    tasks.load_task_entrypoints()
 
     # ensure that there is a sync task registered for this
     # origin/target/collection, and if not exit with error.
 
-    if (diff_task := tasks.get_diff_task(origin, target, collection)) is None:
-        diff_task = diff_collections
-
-    # see if the User specified an apply-filter by name.  If so then retrieve
-    # that class definition from the registered list so that it can be passed to
-    # the take as 'apply_filter' for use.
-
-    options["diff_filter_cls"] = DiffCollectionsFilter.get_registered(
-        origin=origin, target=target, collection=collection, name=options["filter_name"]
+    auditor = Auditor.get_registered(
+        origin=origin, target=target, collection=collection, name=options.get("auditor")
     )
 
+    auditor.options = options
+
+    # if (diff_task := tasks.get_diff_task(origin, target, collection)) is None:
+    #     diff_task = diff_collections
+    #
+    # # see if the User specified an apply-filter by name.  If so then retrieve
+    # # that class definition from the registered list so that it can be passed to
+    # # the take as 'apply_filter' for use.
+    #
+    # options["diff_filter_cls"] = DiffCollectionsFilter.get_registered(
+    #     origin=origin, target=target, collection=collection, name=options["filter_name"]
+    # )
+
     loop = asyncio.get_event_loop()
-    diff_res = loop.run_until_complete(diff_task(**options))
+    diff_res = loop.run_until_complete(run_audit(auditor))
 
     diff_report(diff_res, reports=options.get("diff_report"))
 
@@ -93,19 +102,13 @@ def cli_sync(ctx, origin, target, collection, **options):
     # Determine if there is a reconciler class registered for this combination.
     # if not, then report the error and exit.
 
-    if (
-        reconcile_cls := Reconciler.get_registered(
-            diff_res.origin.source.name,
-            diff_res.target.source.name,
-            diff_res.origin.name,
-            name="default",
-        )
-    ) is None:
+    if (reconciler := Reconciler.get_registered(diff_res, name="default")) is None:
         get_logger().error("Missing registered reconcile task")
         return
 
     # Execute the sync reconcile process.
-    reconciler = reconcile_cls(diff_res=diff_res, **options)
-    loop.run_until_complete(reconcile(reconciler, sync_opts))
+
+    reconciler.options = sync_opts
+    loop.run_until_complete(run_reconcile(reconciler))
 
     # all done.

@@ -36,6 +36,15 @@ class Reconciler(object):
         return decorator
 
     @staticmethod
-    def get_registered(origin, target, collection, name="default"):
-        key = (name, origin, target, collection)
-        return _registered_plugins[_PLUGIN_NAME].get(key)
+    def get_registered(diff_res: DiffResults, name="default") -> "Reconciler":
+        key = (
+            name,
+            diff_res.origin.source.name,
+            diff_res.target.source.name,
+            diff_res.origin.name,
+        )
+
+        if not (cls := _registered_plugins[_PLUGIN_NAME].get(key)):
+            return None
+
+        return cls(diff_res)
