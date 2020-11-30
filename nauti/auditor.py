@@ -38,7 +38,7 @@ class Auditor(object):
     async def fetch_origin(self):
         log = get_logger()
 
-        ident = f"{self.origin.name}/{self.name}"
+        ident = f"{self.origin.source.name}/{self.name}"
         log.info(f"Fetching {ident} collection ...")
         orig_ff = self.options.get("origin_filter") or self.origin_fetch_filter()
         await self.origin.fetch(filters=orig_ff)
@@ -51,7 +51,7 @@ class Auditor(object):
         log = get_logger()
 
         target_ff = self.options.get("target_filter") or self.target_fetch_filter()
-        ident = f"{self.target.name}/{self.name}"
+        ident = f"{self.target.source.name}/{self.name}"
 
         log.info(f"Fetching {ident} collection ...")
 
