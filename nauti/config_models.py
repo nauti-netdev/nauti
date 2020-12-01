@@ -34,6 +34,12 @@ from bidict import bidict, ValueDuplicationError
 import toml
 
 # -----------------------------------------------------------------------------
+# Private Imports
+# -----------------------------------------------------------------------------
+
+from nauti.entrypoints import load_plugins
+
+# -----------------------------------------------------------------------------
 # Exports
 # -----------------------------------------------------------------------------
 
@@ -125,6 +131,7 @@ class CollectionsModel(BaseModel):
     name: Optional[str]
     fields_: Optional[Dict[str, Any]] = Field(alias="fields")
     sources: Optional[Dict[str, CollectionSourceModel]]
+    options: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
     @property
     def fields(self):
@@ -194,11 +201,13 @@ def _load_plugins(cfg_dir: Path):
     This function will load all of the python modules found in the given cfg_dir
     so that any User defined plugins are brought into the system and registered.
     """
+    load_plugins()
+
     plugins_dir = cfg_dir.joinpath("plugins")
     if not plugins_dir.is_dir():
         return
 
-    finder = FileFinder(str(plugins_dir), (SourceFileLoader, [".py"]))
+    finder = FileFinder(str(plugins_dir), (SourceFileLoader, [".py"]))  # noqa
 
     for py_file in plugins_dir.glob("*.py"):
         mod_name = py_file.stem

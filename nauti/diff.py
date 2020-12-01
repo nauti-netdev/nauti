@@ -140,12 +140,18 @@ def diff_report(diff_res: DiffResults, reports: Optional[set] = None):
 
 def diff_report_adds(items: dict):
     items = list(items.values())
-    headers = items[0].keys()
+    headers = list(items[0].keys())
     line = "-" * 80
+
     print(f"{line}\nAdd Items: {len(items)}\n{line}\n")
+    get_row = itemgetter(*headers)
+
+    rows = [get_row(rec) for rec in items]
+    if len(headers) == 1:
+        rows = [[row] for row in rows]
+
     print(
-        tabulate(tabular_data=map(itemgetter(*headers), items), headers=headers),
-        end="\n\n",
+        tabulate(tabular_data=rows, headers=headers), end="\n\n",
     )
 
 

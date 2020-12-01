@@ -22,16 +22,19 @@
 
 
 import asyncio
-import math
 
-__all__ = ["igather"]
+
+DEFAULT_MAX_TASKS = 100
+
+
+__all__ = ["igather", "iawait"]
 
 
 async def igather(coros, limit=None):
     coros = iter(coros)
 
     buf = asyncio.Queue()
-    sem = asyncio.Semaphore(limit or math.inf)
+    sem = asyncio.Semaphore(limit or DEFAULT_MAX_TASKS)
 
     async def submit(_coros, _buf):
         while True:
@@ -81,5 +84,5 @@ async def igather(coros, limit=None):
 
 
 async def iawait(coros, limit=None):
-    async for _ in igather(coros, limit):
+    async for _ in igather(coros, limit or DEFAULT_MAX_TASKS):
         pass

@@ -269,6 +269,12 @@ class Collection(ABC, CollectionMixin):
 
 
 def get_collection(source: Source, name: str) -> Collection:
+    cfg = get_config()
+
+    if name not in cfg.collections:
+        msg = f"Collection '{name}' not found in nauti configuration file."
+        get_logger().error(msg)
+        raise RuntimeError(msg)
 
     if (
         cls := next(
@@ -282,7 +288,6 @@ def get_collection(source: Source, name: str) -> Collection:
     ) is None:
         raise RuntimeError(f"ERROR:NOT-FOUND: nauti collection: {source.name}/{name}")
 
-    cfg = get_config()
     col_obj: Collection = cls(source=source)
-    col_obj.config = cfg.collections[name]
+    col_obj.config = cfg.collections.get(name)
     return col_obj
