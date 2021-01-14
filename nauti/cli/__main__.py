@@ -48,7 +48,10 @@ def main():
         print(f"BODY: {exc.request.stream._body}")  # noqa
 
     except RuntimeError as exc:
+        import traceback
+
         print(exc.args[0])
+        traceback.print_exc(limit=3)
 
 
 if __name__ == "__main__":
