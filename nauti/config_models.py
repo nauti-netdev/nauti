@@ -19,7 +19,6 @@
 
 from typing import Optional, List, Dict, Any, Union
 from pathlib import Path
-from collections import Counter
 from importlib.machinery import SourceFileLoader, FileFinder
 
 # -----------------------------------------------------------------------------
@@ -61,6 +60,12 @@ __all__ = [
 
 
 class BiDict(Dict):
+    """
+    This class is meant to allow the User to define either a bi-direction map or
+    a unidirectional mapping.  The `bidict` is first attempted, and if any
+    duplicates are found then fallback to using `dict`
+    """
+
     @classmethod
     def __get_validators__(cls):
         yield cls.validate
@@ -70,9 +75,12 @@ class BiDict(Dict):
         try:
             return bidict(v)
         except ValueDuplicationError:
-            cnt = Counter(v.values())
-            dups = {key for key, val in cnt.items() if val > 1}
-            raise ValueError(f"map contains duplicates: {str(dups)}")
+            # TODO: perhaps add a warning log if some form of extra --debug flag
+            #       is used to detect these conditions.
+            return dict(v)
+            # cnt = Counter(v.values())
+            # dups = {key for key, val in cnt.items() if val > 1}
+            # raise ValueError(f"map contains duplicates: {str(dups)}")
 
 
 class TokenCredential(NoExtraBaseModel):

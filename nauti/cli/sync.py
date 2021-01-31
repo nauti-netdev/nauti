@@ -47,12 +47,28 @@ async def run_audit(auditor: Auditor):
         return await auditor.audit()
 
 
+def opt_extra_callback(ctx, param, value):
+    extras = dict()
+
+    for extra_expr in value:
+        try:
+            if "=" in extra_expr:
+                key, value = extra_expr.split("=")
+                extras[key] = value
+        except Exception:
+            ctx.fail(f"Cannot handle extra-variable expression: {extra_expr}, abort.")
+
+    return extras
+
+
 @cli.command("sync")
 @click.option("--spec", help="user-defined sync task name", default="default")
 @click.option("--origin", help="origin source name", required=True)
 @click.option("--target", help="target source name", required=True)
 @click.option("--collection", help="collection name", required=True)
-@click.option("--filter-name", help="user-defined sync filter name", default="default")
+@click.option(
+    "--filter-name", "auditor", help="user-defined sync filter name", default="default"
+)
 @click.option("--origin-filter", help="origin specific filter expression")
 @click.option(
     "--diff-report",
@@ -67,6 +83,14 @@ async def run_audit(auditor: Auditor):
     type=click.Choice(["all", "add", "del", "upd"]),
     multiple=True,
 )
+@click.option(
+    "-e",
+    "--extra",
+    "extras",
+    help="extra variables",
+    multiple=True,
+    callback=opt_extra_callback,
+)
 @opt_dry_run
 @click.pass_context
 def cli_sync(ctx, origin, target, collection, **options):
@@ -75,21 +99,10 @@ def cli_sync(ctx, origin, target, collection, **options):
     # origin/target/collection, and if not exit with error.
 
     auditor = Auditor.get_registered(
-        origin=origin, target=target, collection=collection, name=options.get("auditor")
+        origin=origin, target=target, collection=collection, name=options["auditor"]
     )
 
     auditor.options = options
-
-    # if (diff_task := tasks.get_diff_task(origin, target, collection)) is None:
-    #     diff_task = diff_collections
-    #
-    # # see if the User specified an apply-filter by name.  If so then retrieve
-    # # that class definition from the registered list so that it can be passed to
-    # # the take as 'apply_filter' for use.
-    #
-    # options["diff_filter_cls"] = DiffCollectionsFilter.get_registered(
-    #     origin=origin, target=target, collection=collection, name=options["filter_name"]
-    # )
 
     loop = asyncio.get_event_loop()
     diff_res = loop.run_until_complete(run_audit(auditor))

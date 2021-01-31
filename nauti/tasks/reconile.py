@@ -19,19 +19,20 @@ class Reconciler(object):
         self.target = diff_res.target
 
     async def add_items(self):
-        pass
+        raise NotImplementedError()
 
     async def delete_items(self):
-        pass
+        raise NotImplementedError()
 
     async def update_items(self):
-        pass
+        raise NotImplementedError()
 
     @staticmethod
     def register(origin, target, collection, name="default"):
         def decorator(cls):
             key = (name, origin, target, collection)
             _registered_plugins[_PLUGIN_NAME][key] = cls
+            return cls
 
         return decorator
 

@@ -28,8 +28,9 @@ class Source(ABC):
     name = None
     client_class = None
 
-    def __init__(self, source_config: Optional[SourcesModel] = None, **kwargs):
+    def __init__(self, config: Optional[SourcesModel] = None, **kwargs):
         self.client = None
+        self.config = config
 
     async def login(self, *vargs, **kwargs):
         raise NotImplementedError()

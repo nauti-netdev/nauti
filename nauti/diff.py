@@ -84,7 +84,7 @@ def diff(
     if not fields_cmp:
         fields_cmp = {}
 
-    for field in fields or origin.FIELDS:
+    for field in fields or origin.fields or origin.FIELDS:
         if field not in fields_cmp:
             fields_cmp[field] = lambda f: f
 
