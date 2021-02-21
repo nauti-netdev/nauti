@@ -210,7 +210,12 @@ class Collection(ABC, CollectionMixin):
 
         for rec in with_inventory or self.source_records:
             try:
-                item = self.itemize(rec)
+
+                # allow the itemize function to return None, indicating that
+                # this specific item should be skipped.
+
+                if (item := self.itemize(rec)) is None:
+                    continue
 
                 if not with_filter(item):
                     continue
